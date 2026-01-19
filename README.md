@@ -55,22 +55,16 @@ university-grade-system/
 │   ├── teacher/
 │   │   ├── login.html
 │   │   └── dashboard.html
+│   │   └── teacher-app.js
 │   ├── student/
-│   │   ├── login.html
 │   │   └── portal.html
-│   └── README.md
+│   
 │
 ├── database/                         # 資料庫
 │   ├── schema.sql                   # 資料表結構
 │   ├── sample-data.sql              # 測試資料
-│   └── README.md
+│   
 │
-├── docs/                            # 文檔
-│   ├── setup-guide.md               # 安裝指南
-│   ├── api-documentation.md         # API 文檔
-│   └── screenshots/                 # 螢幕截圖
-│       ├── teacher-dashboard.png
-│       └── student-portal.png
 │
 ├── .gitignore                       # Git 忽略檔案
 ├── README.md                        # 專案說明
@@ -214,23 +208,3 @@ mvn clean spring-boot:run
 - ✅ 教材上傳
 - ✅ 作業管理
 
-## 🤝 貢獻
-
-歡迎提交 Issue 和 Pull Request!
-
-## 📄 授權
-
-MIT License
-
-## 👨‍💻 作者
-
-你的名字
-
-## 📧 聯絡方式
-
-- Email: your.email@example.com
-- GitHub: [@你的帳號](https://github.com/你的帳號)
-
-## 🙏 致謝
-
-感謝所有貢獻者的支持!
