@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>學生入口網站</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .tabs {
+            display: flex;
+            background: white;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        .content {
+            padding: 30px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .item {
+            background: #f9f9f9;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .btn {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 學生入口網站</h1>
+            <p id="studentName"></p>
+            <button class="logout-btn" onclick="logout()">登出</button>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('grades')">📊 我的成績</div>
+            <div class="tab" onclick="switchTab('announcements')">📢 課程公告</div>
+            <div class="tab" onclick="switchTab('materials')">📚 課程教材</div>
+            <div class="tab" onclick="switchTab('assignments')">📝 我的作業</div>
+        </div>
+
+        <div class="content">
+            <!-- 成績 -->
+            <div id="tab-grades" class="tab-content active">
+                <h2>我的成績</h2>
+                <table>
+                    <thead><tr><th>課程</th><th>老師</th><th>成績</th></tr></thead>
+                    <tbody id="gradeList"></tbody>
+                </table>
+            </div>
+
+            <!-- 公告 -->
+            <div id="tab-announcements" class="tab-content">
+                <h2>課程公告</h2>
+                <div id="announcementList"></div>
+            </div>
+
+            <!-- 教材 -->
+            <div id="tab-materials" class="tab-content">
+                <h2>課程教材</h2>
+                <div id="materialList"></div>
+            </div>
+
+            <!-- 作業 -->
+            <div id="tab-assignments" class="tab-content">
+                <h2>我的作業</h2>
+                <div id="assignmentList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:3000';
+        let student = null;
+
+        window.onload = function() {
+            student = JSON.parse(localStorage.getItem('currentStudent') || 'null');
+            if (!student) {
+                window.location.href = 'student-login.html';
+                return;
+            }
+            document.getElementById('studentName').textContent = student.name + ' 同學';
+            loadGrades();
+            loadAnnouncements();
+            loadMaterials();
+            loadAssignments();
+        };
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
+
+        function loadGrades() {
+            fetch(`${API}/student/${student.student_id}/grades`)
+                .then(r => r.json())
+                .then(grades => {
+                    document.getElementById('gradeList').innerHTML = grades.map(g => `
+                        <tr>
+                            <td>${g.course_name}</td>
+                            <td>${g.teacher_name}</td>
+                            <td>${g.score !== null ? g.score : '未登記'}</td>
+                        </tr>
+                    `).join('');
+                });
+        }
+
+        function loadAnnouncements() {
+            // 取得學生所有課程的公告
+            fetch(`${API}/student/${student.student_id}/grades`)
+                .then(r => r.json())
+                .then(async grades => {
+                    let allAnnouncements = [];
+                    for (let g of grades) {
+                        // 需要先取得 courseId (這需要修改 API)
+                        // 暫時顯示提示
+                    }
+                    document.getElementById('announcementList').innerHTML = '<div class="item">公告功能開發中</div>';
+                });
+        }
+
+        function loadMaterials() {
+            document.getElementById('materialList').innerHTML = '<div class="item">教材功能開發中</div>';
+        }
+
+        function loadAssignments() {
+            document.getElementById('assignmentList').innerHTML = '<div class="item">作業功能開發中</div>';
+        }
+
+        function logout() {
+            localStorage.removeItem('currentStudent');
+            window.location.href = 'student-login.html';
+        }
+    </script>
+</body>
+</html>

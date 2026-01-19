@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>老師管理系統</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft JhengHei', Arial, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+        
+        .sidebar { width: 280px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 25px 20px; border-bottom: 1px solid rgba(255,255,255,0.2); }
+        .course-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .course-item { background: rgba(255,255,255,0.1); padding: 15px; margin: 8px 0; border-radius: 8px; cursor: pointer; transition: all 0.3s; }
+        .course-item:hover { background: rgba(255,255,255,0.2); }
+        .course-item.active { background: rgba(255,255,255,0.3); border-left: 4px solid white; }
+        .logout-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 12px; margin: 10px; border-radius: 8px; cursor: pointer; }
+        
+        .main-content { flex: 1; display: flex; flex-direction: column; background: #f5f7fa; }
+        .topbar { background: white; padding: 20px 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .tabs { display: flex; background: white; border-bottom: 2px solid #e0e0e0; }
+        .tab { padding: 15px 30px; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s; }
+        .tab.active { color: #667eea; border-bottom-color: #667eea; }
+        
+        .content-area { flex: 1; overflow-y: auto; padding: 30px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .card { background: white; border-radius: 10px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95em; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-danger { background: #f44336; color: white; }
+        .btn-small { padding: 6px 12px; font-size: 0.85em; }
+        
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px; }
+        .form-group textarea { min-height: 100px; }
+        
+        .item { background: #f9f9f9; padding: 15px; margin-bottom: 10px; border-radius: 6px; border-left: 4px solid #667eea; }
+        .item-header { display: flex; justify-content: space-between; align-items: center; }
+        .item-actions { display: flex; gap: 8px; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f5f5f5; padding: 12px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #f0f0f0; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: 10px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>🎓 課程管理</h2>
+            <p id="teacherName"></p>
+        </div>
+        <div class="course-list" id="courseList"></div>
+        <button class="logout-btn" onclick="logout()">登出</button>
+    </div>
+
+    <div class="main-content">
+        <div class="topbar">
+            <h1 id="courseTitle">請選擇課程</h1>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('students')">📋 學生</div>
+            <div class="tab" onclick="switchTab('announcements')">📢 公告</div>
+            <div class="tab" onclick="switchTab('materials')">📚 教材</div>
+            <div class="tab" onclick="switchTab('assignments')">📝 作業</div>
+            <div class="tab" onclick="switchTab('grades')">📊 成績</div>
+        </div>
+
+        <div class="content-area">
+            <div id="tab-students" class="tab-content active">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>學生名單</h3>
+                        <button class="btn btn-primary" onclick="showAddStudentModal()">➕ 新增學生</button>
+                    </div>
+                    <table>
+                        <thead><tr><th>學號</th><th>姓名</th><th>操作</th></tr></thead>
+                        <tbody id="studentList"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tab-announcements" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>課程公告</h3>
+                        <button class="btn btn-primary" onclick="showAnnouncementModal()">➕ 新增公告</button>
+                    </div>
+                    <div id="announcementList"></div>
+                </div>
+            </div>
+
+            <div id="tab-materials" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>課程教材</h3>
+                        <button class="btn btn-primary" onclick="showMaterialModal()">➕ 上傳教材</button>
+                    </div>
+                    <div id="materialList"></div>
+                </div>
+            </div>
+
+            <div id="tab-assignments" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>課程作業</h3>
+                        <button class="btn btn-primary" onclick="showAssignmentModal()">➕ 新增作業</button>
+                    </div>
+                    <div id="assignmentList"></div>
+                </div>
+            </div>
+
+            <div id="tab-grades" class="tab-content">
+                <div class="card">
+                    <div class="card-header"><h3>成績管理</h3></div>
+                    <table>
+                        <thead><tr><th>學號</th><th>姓名</th><th>成績</th><th>操作</th></tr></thead>
+                        <tbody id="gradeList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模態框 -->
+    <div id="announcementModal" class="modal">
+        <div class="modal-content">
+            <h3>新增公告</h3>
+            <div class="form-group">
+                <label>標題</label>
+                <input type="text" id="announcementTitle">
+            </div>
+            <div class="form-group">
+                <label>內容</label>
+                <textarea id="announcementContent"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="saveAnnouncement()">發布</button>
+            <button class="btn" onclick="closeModal('announcementModal')">取消</button>
+        </div>
+    </div>
+
+    <div id="materialModal" class="modal">
+        <div class="modal-content">
+            <h3>上傳教材</h3>
+            <div class="form-group">
+                <label>教材名稱</label>
+                <input type="text" id="materialTitle">
+            </div>
+            <div class="form-group">
+                <label>說明</label>
+                <textarea id="materialDescription"></textarea>
+            </div>
+            <div class="form-group">
+                <label>檔案</label>
+                <input type="file" id="materialFile">
+            </div>
+            <button class="btn btn-primary" onclick="uploadMaterial()">上傳</button>
+            <button class="btn" onclick="closeModal('materialModal')">取消</button>
+        </div>
+    </div>
+
+    <div id="assignmentModal" class="modal">
+        <div class="modal-content">
+            <h3>新增作業</h3>
+            <div class="form-group">
+                <label>標題</label>
+                <input type="text" id="assignmentTitle">
+            </div>
+            <div class="form-group">
+                <label>說明</label>
+                <textarea id="assignmentDescription"></textarea>
+            </div>
+            <div class="form-group">
+                <label>截止日期</label>
+                <input type="datetime-local" id="assignmentDueDate">
+            </div>
+            <button class="btn btn-primary" onclick="saveAssignment()">建立</button>
+            <button class="btn" onclick="closeModal('assignmentModal')">取消</button>
+        </div>
+    </div>
+
+    <div id="addStudentModal" class="modal">
+        <div class="modal-content">
+            <h3>新增學生</h3>
+            <div class="form-group">
+                <label>選擇學生</label>
+                <select id="studentSelect" style="width:100%; padding:10px;"></select>
+            </div>
+            <button class="btn btn-primary" onclick="addStudentToCourse()">確認</button>
+            <button class="btn" onclick="closeModal('addStudentModal')">取消</button>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:3000';
+        let teacher = null;
+        let course = null;
+
+        window.onload = function() {
+            teacher = JSON.parse(localStorage.getItem('currentTeacher') || 'null');
+            if (!teacher) {
+                window.location.href = 'login.html';
+                return;
+            }
+            document.getElementById('teacherName').textContent = teacher.name;
+            loadCourses();
+        };
+
+        function loadCourses() {
+            fetch(`${API}/teacher/${teacher.teacher_id}/courses`)
+                .then(r => r.json())
+                .then(courses => {
+                    document.getElementById('courseList').innerHTML = courses.map(c => `
+                        <div class="course-item" onclick="selectCourse(${c.courseId}, '${c.courseName}')">
+                            <h4>${c.courseName}</h4>
+                            <p>課程 ${c.courseId}</p>
+                        </div>
+                    `).join('') || '<p style="padding:20px; text-align:center;">尚無課程</p>';
+                });
+        }
+
+        function selectCourse(id, name) {
+            course = { courseId: id, courseName: name };
+            document.getElementById('courseTitle').textContent = name;
+            document.querySelectorAll('.course-item').forEach(el => el.classList.remove('active'));
+            event.target.closest('.course-item').classList.add('active');
+            loadStudents();
+            loadAnnouncements();
+            loadMaterials();
+            loadAssignments();
+            loadGrades();
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
+
+        function logout() {
+            localStorage.removeItem('currentTeacher');
+            window.location.href = 'login.html';
+        }
+
+        function loadStudents() {
+            if (!course) return;
+            fetch(`${API}/courses/${course.courseId}/students`)
+                .then(r => r.json())
+                .then(students => {
+                    document.getElementById('studentList').innerHTML = students.map(s => `
+                        <tr><td>${s.student_id}</td><td>${s.name}</td><td><button class="btn btn-danger btn-small">移除</button></td></tr>
+                    `).join('') || '<tr><td colspan="3" style="text-align:center; padding:20px;">尚無學生</td></tr>';
+                });
+        }
+
+        function showAddStudentModal() {
+            if (!course) {
+                alert('請先選擇課程!');
+                return;
+            }
+            fetch(`${API}/students`)
+                .then(r => r.json())
+                .then(students => {
+                    document.getElementById('studentSelect').innerHTML = students.map(s => 
+                        `<option value="${s.studentId}">${s.studentId} - ${s.name}</option>`
+                    ).join('');
+                    document.getElementById('addStudentModal').classList.add('active');
+                });
+        }
+
+        function addStudentToCourse() {
+            fetch(`${API}/api/courses/${course.courseId}/students`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentId: document.getElementById('studentSelect').value })
+            })
+            .then(r => r.json())
+            .then(() => {
+                alert('學生加入成功!');
+                closeModal('addStudentModal');
+                loadStudents();
+            })
+            .catch(err => alert('加入失敗'));
+        }
+
+        function loadAnnouncements() {
+            if (!course) return;
+            fetch(`${API}/api/courses/${course.courseId}/announcements`)
+                .then(r => r.json())
+                .then(announcements => {
+                    document.getElementById('announcementList').innerHTML = announcements.map(a => `
+                        <div class="item">
+                            <div class="item-header">
+                                <strong>${a.title}</strong>
+                                <div class="item-actions">
+                                    <button class="btn btn-danger btn-small" onclick="deleteAnnouncement(${a.id})">刪除</button>
+                                </div>
+                            </div>
+                            <p>${a.content}</p>
+                            <small style="color:#999;">${new Date(a.createdAt).toLocaleString()}</small>
+                        </div>
+                    `).join('') || '<p style="padding:20px; text-align:center; color:#999;">尚無公告</p>';
+                });
+        }
+
+        function showAnnouncementModal() {
+            if (!course) {
+                alert('請先選擇課程!');
+                return;
+            }
+            document.getElementById('announcementTitle').value = '';
+            document.getElementById('announcementContent').value = '';
+            document.getElementById('announcementModal').classList.add('active');
+        }
+
+        function saveAnnouncement() {
+            if (!course) {
+                alert('請先選擇課程!');
+                return;
+            }
+            fetch(`${API}/api/courses/${course.courseId}/announcements`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: document.getElementById('announcementTitle').value,
+                    content: document.getElementById('announcementContent').value
+                })
+            })
+            .then(() => {
+                alert('公告發布成功!');
+                closeModal('announcementModal');
+                loadAnnouncements();
+            });
+        }
+
+        function deleteAnnouncement(id) {
+            if (!confirm('確定刪除?')) return;
+            fetch(`${API}/api/courses/announcements/${id}`, { method: 'DELETE' })
+                .then(() => {
+                    alert('刪除成功!');
+                    loadAnnouncements();
+                });
+        }
+
+        function loadMaterials() {
+            if (!course) return;
+            fetch(`${API}/api/courses/${course.courseId}/materials`)
+                .then(r => r.json())
+                .then(materials => {
+                    document.getElementById('materialList').innerHTML = materials.map(m => `
+                        <div class="item">
+                            <div class="item-header">
+                                <strong>${m.title}</strong>
+                                <div class="item-actions">
+                                    <a href="${API}/api/courses/materials/${m.id}/download" class="btn btn-success btn-small">下載</a>
+                                    <button class="btn btn-danger btn-small" onclick="deleteMaterial(${m.id})">刪除</button>
+                                </div>
+                            </div>
+                            <p>${m.description}</p>
+                            <small style="color:#999;">${m.fileName}</small>
+                        </div>
+                    `).join('') || '<p style="padding:20px; text-align:center; color:#999;">尚無教材</p>';
+                });
+        }
+
+        function showMaterialModal() {
+            if (!course) {
+                alert('請先選擇課程!');
+                return;
+            }
+            document.getElementById('materialTitle').value = '';
+            document.getElementById('materialDescription').value = '';
+            document.getElementById('materialFile').value = '';
+            document.getElementById('materialModal').classList.add('active');
+        }
+
+        function uploadMaterial() {
+            if (!course) {
+                alert('請先選擇課程!');
+                return;
+            }
+            const file = document.getElementById('materialFile').files[0];
+            if (!file) {
+                alert('請選擇檔案!');
+                return;
+            }
+            const formData = new FormData();
+            formData.append('title', document.getElementById('materialTitle').value);
+            formData.append('description', document.getElementById('materialDescription').value);
+            formData.append('file', document.getElementById('materialFile').files[0]);
+
+            fetch(`${API}/api/courses/${course.courseId}/materials`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(() => {
+                alert('教材上傳成功!');
+                closeModal('materialModal');
+                loadMaterials();
+            });
+        }
+
+        function deleteMaterial(id) {
+            if (!confirm('確定刪除?')) return;
+            fetch(`${API}/api/courses/materials/${id}`, { method: 'DELETE' })
+                .then(() => {
+                    alert('刪除成功!');
+                    loadMaterials();
+                });
+        }
+
+        function loadAssignments() {
+            if (!course) return;
+            fetch(`${API}/api/courses/${course.courseId}/assignments`)
+                .then(r => r.json())
+                .then(assignments => {
+                    document.getElementById('assignmentList').innerHTML = assignments.map(a => `
+                        <div class="item">
+                            <div class="item-header">
+                                <strong>${a.title}</strong>
+                                <div class="item-actions">
+                                    <button class="btn btn-small">查看繳交 (${a.submissionCount})</button>
+                                    <button class="btn btn-danger btn-small" onclick="deleteAssignment(${a.id})">刪除</button>
+                                </div>
+                            </div>
+                            <p>${a.description}</p>
+                            <small style="color:#999;">截止: ${new Date(a.dueDate).toLocaleString()}</small>
+                        </div>
+                    `).join('') || '<p style="padding:20px; text-align:center; color:#999;">尚無作業</p>';
+                });
+        }
+
+        function showAssignmentModal() {
+            if (!course) {
+                alert('請先選擇課程!');
+                return;
+            }
+            document.getElementById('assignmentTitle').value = '';
+            document.getElementById('assignmentDescription').value = '';
+            document.getElementById('assignmentDueDate').value = '';
+            document.getElementById('assignmentModal').classList.add('active');
+        }
+
+        function saveAssignment() {
+            if (!course) {
+                alert('請先選擇課程!');
+                return;
+            }
+            fetch(`${API}/api/courses/${course.courseId}/assignments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: document.getElementById('assignmentTitle').value,
+                    description: document.getElementById('assignmentDescription').value,
+                    dueDate: document.getElementById('assignmentDueDate').value
+                })
+            })
+            .then(() => {
+                alert('作業建立成功!');
+                closeModal('assignmentModal');
+                loadAssignments();
+            });
+        }
+
+        function deleteAssignment(id) {
+            if (!confirm('確定刪除?')) return;
+            fetch(`${API}/api/courses/assignments/${id}`, { method: 'DELETE' })
+                .then(() => {
+                    alert('刪除成功!');
+                    loadAssignments();
+                });
+        }
+
+        function loadGrades() {
+            if (!course) return;
+            fetch(`${API}/courses/${course.courseId}/students`)
+                .then(r => r.json())
+                .then(students => {
+                    document.getElementById('gradeList').innerHTML = students.map(s => `
+                        <tr>
+                            <td>${s.student_id}</td>
+                            <td>${s.name}</td>
+                            <td><input type="number" id="score_${s.student_id}" value="${s.score || ''}" min="0" max="100" style="width:80px; padding:5px;"></td>
+                            <td><button class="btn btn-success btn-small" onclick="saveScore('${s.student_id}')">儲存</button></td>
+                        </tr>
+                    `).join('');
+                });
+        }
+
+        function saveScore(studentId) {
+            fetch(`${API}/grades`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    course_id: course.courseId,
+                    score: parseInt(document.getElementById('score_' + studentId).value)
+                })
+            })
+            .then(() => alert('成績儲存成功!'));
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+    </script>
+</body>
+</html>
