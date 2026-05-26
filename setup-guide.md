@@ -292,10 +292,3 @@ COPY target/grade-system-1.0.0.jar app.jar
 ENTRYPOINT ["java","-jar","/app.jar"]
 ```
 
----
-
-## 📞 需要幫助?
-
-- 📧 Email: your.email@example.com
-- 💬 GitHub Issues: https://github.com/你的帳號/university-grade-system/issues
-- 📖 Wiki: https://github.com/你的帳號/university-grade-system/wiki
